@@ -857,3 +857,38 @@ mod override_parse_tests {
         assert!(req.block_overrides.is_none());
     }
 }
+
+#[cfg(test)]
+mod call_integration_tests {
+    use crate::rpc::map_http_requests;
+    use crate::test_utils::{default_context_with_storage, setup_store};
+    use crate::utils::RpcRequest;
+    use serde_json::{Value, json};
+
+    /// Funded EOA from fixtures/genesis/l1.json.
+    const RICH: &str = "0x00000a8d3f37af8def18832962ee008d8dca4f7b";
+
+    /// Simulation RPCs run relaxed messages: a call object without `nonce`
+    /// must not be rejected for senders whose account nonce is nonzero (the
+    /// env used to default the tx nonce to 0 and the hook enforced it).
+    #[tokio::test]
+    async fn eth_call_ignores_sender_nonce() {
+        let storage = setup_store().await;
+        let context = default_context_with_storage(storage).await;
+        // The nonce override puts the sender at nonce 5; the call object
+        // carries no nonce.
+        let request: RpcRequest = serde_json::from_value(json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "eth_call",
+            "params": [
+                {"from": RICH, "to": "0xc100000000000000000000000000000000000000", "value": "0x1"},
+                "latest",
+                {RICH: {"nonce": "0x5"}},
+            ],
+        }))
+        .unwrap();
+        let result = map_http_requests(&request, context).await.unwrap();
+        assert_eq!(result, Value::String("0x".to_string()));
+    }
+}
