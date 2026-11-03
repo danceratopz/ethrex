@@ -1,10 +1,10 @@
 # Mainnet hive test configuration
-# Pinned to tests@v20.0.1 (execution-specs mainnet fixture release:
+# Pinned to tests@v21.0.2 (execution-specs mainnet fixture release:
 # Osaka + BPO1 + BPO2). Replaces the archived
 # ethereum/execution-spec-tests `fixtures_develop` bundle.
-fixtures: https://github.com/ethereum/execution-specs/releases/download/tests%40v20.0.1/fixtures.tar.gz
-# The tests@v20.0.1 tag commit. Any future pin must still descend from
+fixtures: https://github.com/ethereum/execution-specs/releases/download/tests%40v21.0.2/fixtures.tar.gz
+# The tests@v21.0.2 tag commit. Any future pin must still descend from
 # execution-specs ecd94a47 (PR #3104), which carries the ethrex
 # INVALID_SIGNATURE_VRS exception mappings; older commits silently fail
 # 80 consume-engine bad_v_r_s cases.
-eels_commit: 87aba1a38a476b31f819a2390eb481527e6dc683
+eels_commit: e27f097ec7b3e6e8ee9c2c1873c183e8f7da7a6e
