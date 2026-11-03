@@ -17,8 +17,8 @@ Next fork: **Glamsterdam** (CL Gloas, EL Amsterdam). Mainnet date not yet schedu
 **glamsterdam-devnet-8**
 
 - Spec baseline: [`devnets/glamsterdam/8`](https://github.com/ethereum/execution-specs/tree/devnets/glamsterdam/8)
-- Fixtures: [`tests@v21.0.1`](https://github.com/ethereum/execution-specs/releases/tag/tests@v21.0.1), a coverage-only follow-up to `tests@v21.0.0`, the first mainnet bundle to carry Amsterdam, which is why there is no longer a separate devnet pin
-- EELS commit: `1562e2f8b5cb1efda7e0d7c517f2dfb5742c0a43`
+- Fixtures: [`tests@v21.0.2`](https://github.com/ethereum/execution-specs/releases/tag/tests@v21.0.2), a coverage-only follow-up to `tests@v21.0.0`, the first mainnet bundle to carry Amsterdam, which is why there is no longer a separate devnet pin
+- EELS commit: `e27f097ec7b3e6e8ee9c2c1873c183e8f7da7a6e`
 - Status: 🟢 aligned, blockchain, state and engine ef-tests green on the v21.0.1 bundle
 - Tracking: [#6583]
 
