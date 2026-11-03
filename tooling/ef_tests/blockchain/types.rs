@@ -102,6 +102,10 @@ pub struct BlobSchedule {
     #[serde(rename = "BPO5")]
     pub bpo5: Option<ForkBlobSchedule>,
     pub amsterdam: Option<ForkBlobSchedule>,
+    #[serde(rename = "AmsterdamBPOIncrease")]
+    pub amsterdam_bpo_increase: Option<ForkBlobSchedule>,
+    #[serde(rename = "AmsterdamBPODecrease")]
+    pub amsterdam_bpo_decrease: Option<ForkBlobSchedule>,
 }
 
 impl From<BlobSchedule> for ethrex_common::types::BlobSchedule {
@@ -131,7 +135,12 @@ impl From<BlobSchedule> for ethrex_common::types::BlobSchedule {
         if let Some(bpo5_schedule) = val.bpo5 {
             blob_schedule.bpo5 = Some(bpo5_schedule.into())
         }
-        if let Some(amsterdam_schedule) = val.amsterdam {
+        // An Amsterdam BPO scenario's schedule takes the BPO3 slot (see `fork.rs`). The
+        // Amsterdam entry is left out: a named fork's entry takes precedence over the
+        // BPO entries, so it would hide the scenario's schedule.
+        if let Some(scenario_schedule) = val.amsterdam_bpo_increase.or(val.amsterdam_bpo_decrease) {
+            blob_schedule.bpo3 = Some(scenario_schedule.into())
+        } else if let Some(amsterdam_schedule) = val.amsterdam {
             blob_schedule.amsterdam = Some(amsterdam_schedule.into())
         }
         blob_schedule

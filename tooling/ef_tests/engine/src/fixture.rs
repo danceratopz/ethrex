@@ -118,7 +118,10 @@ impl EngineFixture {
         ethrex_common::types::Fork,
         Option<(ethrex_common::types::Fork, u64)>,
     )> {
-        parse_network(&self.network)
+        match split_bpo_scenario(&self.network) {
+            Some((base, _, _)) => parse_network(base),
+            None => parse_network(&self.network),
+        }
     }
 
     /// The "active" fork for skip checks: the transition target if present, else the genesis fork.
@@ -144,6 +147,9 @@ impl EngineFixture {
                 .as_object_mut()
                 .expect("config_json is an object")
                 .insert("blobSchedule".into(), converted);
+        }
+        if let Some((base, scenario, time)) = split_bpo_scenario(&self.network) {
+            apply_bpo_scenario(&mut config_json, base, &scenario, time);
         }
         let genesis_json = build_genesis_json(&self.genesis_block_header, &self.pre, config_json);
         serde_json::from_value::<Genesis>(genesis_json).context("Failed to deserialize Genesis")
@@ -242,6 +248,46 @@ fn parse_network(
         return Ok((from, Some((to, secs))));
     }
     Ok((single_fork(s)?, None))
+}
+
+/// Split an EEST BPO scenario network into `(base fork, scenario name, activation time)`.
+///
+/// A scenario such as `AmsterdamBPOIncrease` keeps its base fork's rules and changes only
+/// the blob schedule. Its transition leaves out the fork prefix:
+/// `AmsterdamToBPOIncreaseAtTime15k` → `("Amsterdam", "AmsterdamBPOIncrease", 15_000)`.
+fn split_bpo_scenario(s: &str) -> Option<(&str, String, u64)> {
+    for kind in ["BPOIncrease", "BPODecrease"] {
+        if let Some(base) = s.strip_suffix(kind) {
+            return Some((base, s.to_string(), 0));
+        }
+        if let Some(base) = s
+            .strip_suffix(&format!("To{kind}AtTime15k"))
+            .filter(|base| !base.is_empty())
+        {
+            return Some((base, format!("{base}{kind}"), 15_000));
+        }
+    }
+    None
+}
+
+/// Activate a BPO scenario in the next free BPO slot, as hive's ruleset does: the slot after
+/// the last `BPO<n>` entry in the blob schedule, with the scenario's blob params. The base
+/// fork's own blob entry is dropped, since a named fork's entry takes precedence over the
+/// BPO entries and would hide the scenario's.
+fn apply_bpo_scenario(config: &mut Value, base: &str, scenario: &str, time: u64) {
+    let obj = config.as_object_mut().expect("config is an object");
+    let Some(schedule) = obj.get_mut("blobSchedule").and_then(Value::as_object_mut) else {
+        return;
+    };
+    let slot = (1..=5)
+        .take_while(|n| schedule.contains_key(&format!("bpo{n}")))
+        .count()
+        + 1;
+    schedule.remove(&base.to_lowercase());
+    if let Some(entry) = schedule.remove(&scenario.to_lowercase()) {
+        schedule.insert(format!("bpo{slot}"), entry);
+    }
+    obj.insert(format!("bpo{slot}Time"), time.into());
 }
 
 fn single_fork(s: &str) -> anyhow::Result<ethrex_common::types::Fork> {
@@ -451,5 +497,19 @@ mod tests {
         let fork = fixture.fork().expect("fork() must succeed for London");
         assert_eq!(fork, ethrex_common::types::Fork::London);
         assert!(is_pre_paris(fork), "London is pre-Paris");
+    }
+
+    #[test]
+    fn bpo_scenario_networks_split() {
+        assert_eq!(
+            split_bpo_scenario("AmsterdamBPOIncrease"),
+            Some(("Amsterdam", "AmsterdamBPOIncrease".to_string(), 0))
+        );
+        assert_eq!(
+            split_bpo_scenario("AmsterdamToBPODecreaseAtTime15k"),
+            Some(("Amsterdam", "AmsterdamBPODecrease".to_string(), 15_000))
+        );
+        assert_eq!(split_bpo_scenario("OsakaToBPO1AtTime15k"), None);
+        assert_eq!(split_bpo_scenario("BPO2"), None);
     }
 }
